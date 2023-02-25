@@ -3,35 +3,37 @@ version: '3.7'
 services:
   neo4j:
     #image: neo4j:4.2.3-enterprise
+    image: neo4j:4.3.0-community
     #image: neo4j:5.2.0-enterprise
-    image: neo4j:5.2.0-community #https://hub.docker.com/_/neo4j
-    container_name: neo4j
-    hostname: neo4j
-    # volumes:
-    #   - $HOME/graph_data/my_data:/data
-    #   - $HOME/graph_data/my_data:/var/lib/neo4j/import
-    # volumes:
-      # - ./plugins:/plugins
-      # - ./data:/data
-      # - ./import:/var/lib/neo4j/import
+    #image: neo4j:5.2.0-community #https://hub.docker.com/_/neo4j
+    container_name: neo4j_kg
+    hostname: neo4j_kg
+    volumes:
+      - $HOME/graph_data/kg_official/data:/data
+      #- $HOME/graph_data/kg_official/import:/var/lib/neo4j/import
+      - /lustre/data/dataspaces/k-cmf/pwc/:/var/lib/neo4j/import
+      - $HOME/graph_data/kg_official/plugins:/var/lib/neo4j/plugins
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "7475:7474"
+      - "7688:7687"
+    user: "$UID:$GID"
     environment:
-      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      #- NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
       - NEO4J_AUTH=${NEO4J_USER_NAME}/${NEO4J_PASSWD}
-      - NEO4J_PLUGINS=["apoc", "n10s", "graph-data-science"]
+      #- NEO4J_PLUGINS=["apoc", "n10s", "graph-data-science"]
+      - NEO4JLABS_PLUGINS=["apoc", "n10s", "graph-data-science"]
+      # - NEO4J_dbms_security_procedures_unrestricted=apoc.*
       #- NEO4J_PLUGINS=["apoc", "n10s"]
       #- NEO4J_PLUGINS=["apoc"]
       - apoc.import.file.enabled=true
       - apoc.export.file.enabled=true
       - apoc.export.json.all=true
       # Comment these lines if you do not have the memory available
-      # - NEO4J_dbms_memory_pagecache_size=4G
-      # - NEO4j_dbms_memory_heap_initial__size=4G
-      # - NEO4J_dbms_memory_heap_max__size=8G
+      - NEO4J_dbms_memory_pagecache_size=4G
+      - NEO4j_dbms_memory_heap_initial__size=4G
+      - NEO4J_dbms_memory_heap_max__size=8G
     networks:
-      - neo_net
+      - neo_net_kg
     healthcheck:
       test: wget http://localhost:7474 || exit 1
       interval: 1s
@@ -44,17 +46,17 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: jupyterlab
-    hostname: jupyterlab
+    hostname: jupyterlab_kg
     ports:
-      - "8888:8888"
+      - "8889:8888"
     volumes:
       - ./notebooks:/home/jovyan/work
     links:
       - neo4j
     networks:
-      - neo_net
-    # user: root
-    # #working_dir: /home/$USER
+      - neo_net_kg
+    user: root
+    working_dir: /home/$USER
     environment:
       - NB_USER=$USER
       - NB_GROUP=$GROUP
@@ -64,15 +66,15 @@ services:
       - CHOWN_HOME_OPTS= -R
     #   - GRANT_SUDO=yes
     #   - DOCKER_STACKS_JUPYTER_CMD=lab
-      - JUPYTER_TOKEN=docker
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
       # - JUPYTER_ENABLE_LAB=yes
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER_NAME=${NEO4J_USER_NAME} #from .env file
       - NEO4J_PASSWD=${NEO4J_PASSWD} #from .env file
-    depends_on: 
-      neo4j:
-        condition: service_healthy #https://github.com/neo4j/neo4j/issues/7203
+  #   depends_on: 
+  #     neo4j:
+  #       condition: service_healthy #https://github.com/neo4j/neo4j/issues/7203
 
 networks:
-  neo_net:    
+  neo_net_kg:    
 
